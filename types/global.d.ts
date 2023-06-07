@@ -1,25 +1,66 @@
-declare type VisionRectangle = [number, number, number, number];
-declare type VisionPoint = [number, number];
+declare type RootStackParamList = {
+  HomeScreen: undefined;
+  CameraFrame: undefined;
+  InfoScreen: undefined;
+};
+declare type Frame = import("react-native-vision-camera").Frame;
 
-declare interface VisionTextBase {
+declare type RootNavigationProp = import("@react-navigation/native-stack").NativeStackNavigationProp<RootStackParamList>;
+
+declare interface IOCRError {
+  code: string;
+  message: string;
+}
+
+declare interface IOCRNricData {
+  address?: string;
+  city?: string;
+  country?: string;
+  dateOfBirth?: Date;
+  error?: IOCRError;
+  gender?: string;
+  idNumber?: string;
+  name?: string;
+  placeOfBirth?: string;
+  postCode?: string;
+  state?: string;
+}
+
+declare type TBoundingFrame = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  boundingCenterX: number;
+  boundingCenterY: number;
+};
+declare type Point = {
+  x: number;
+  y: number;
+};
+declare type TextElement = {
   text: string;
-  confidence: null | number;
+  frame: TBoundingFrame;
+  cornerPoints: Point[];
+};
+declare type TextLine = {
+  text: string;
+  elements: TextElement[];
+  frame: TBoundingFrame;
   recognizedLanguages: string[];
-  boundingBox: VisionRectangle;
-  cornerPoints: VisionPoint[];
-}
-
-declare type VisionTextElement = VisionTextBase;
-
-declare interface VisionTextLine extends VisionTextBase {
-  elements: VisionTextElement[];
-}
-
-declare interface TextBlock extends VisionTextBase {
-  lines: VisionTextLine[];
-}
-
-declare interface VisionText {
+  cornerPoints: Point[];
+};
+declare interface ITextBlock {
   text: string;
-  blocks: TextBlock[];
+  lines: TextLine[];
+  frame: TBoundingFrame;
+  recognizedLanguages: string[];
+  cornerPoints: Point[];
+}
+declare interface IText {
+  text: string;
+  blocks: ITextBlock[];
+}
+declare interface TOCRFrame {
+  result: IText;
 }

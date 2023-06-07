@@ -1,0 +1,12 @@
+export const PRIMARY = "#171930";
+export const SECONDARY = "#191923";
+export const THIRD = "#0E79B2";
+export const WHITE = "#FEFEFE";
+export const ROSERED = "#BF1363";
+export const ORANGE = "#F39237";
+export const DEFAULT = "#424951ff";
+export const OXFORDBLUE = "#030521ff";
+export const BUTTON = "#175AEAff";
+export const AIRBLUE = "#61A4C9ff";
+export const BORDERCOLOUR = "#06B07B";
+export const OVERLAY = "rgba(0,0,0,0.7)";
