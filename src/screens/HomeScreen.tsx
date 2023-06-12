@@ -1,5 +1,5 @@
-import { Linking, Text, TouchableOpacity, View, ViewStyle } from "react-native";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Linking, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { CornerMarker } from "../CornerMarker";
 import { Camera, useCameraDevices, useFrameProcessor } from "react-native-vision-camera";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -7,21 +7,32 @@ import Icon from "react-native-vector-icons/Ionicons";
 import {
   BORDERCOLOUR,
   DICTIONARY_PLACE_OF_BIRTH,
+  FRAMERATIO,
   ItemSeparator,
   NRIC_DATE_FORMAT,
   ORANGE,
   OVERLAY,
   OXFORDBLUE,
-  PRIMARY,
+  POPPINS_BLACK,
+  ProgressChecker,
   ROSERED,
   WHITE,
-  h2,
-  h4,
+  h12,
+  h16,
+  h20,
+  h25,
+  h28,
+  h360,
   h5,
-  setHeight,
-  setWidth,
+  h64,
+  h72,
   titleCaseString,
   w100,
+  w226,
+  w24,
+  w48,
+  w5,
+  w82,
 } from "../constants";
 import { runOnJS } from "react-native-reanimated";
 import { scanOCR } from "vision-camera-ocr";
@@ -29,13 +40,19 @@ import { OCRUtils } from "../constants";
 import { SECONDARY } from "../constants";
 import moment from "moment";
 import { ERROR, ERROR_CODE } from "../constants/error";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { Stepper } from "../Stepper";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { GlobalContext } from "../Context";
 
-const HomeScreen = () => {
+interface IHomeScreenProps extends NativeStackScreenProps<RootStackParamList, "HomeScreen"> {
+  currentStep: string;
+}
+const HomeScreen = ({}: IHomeScreenProps) => {
   let mykad: IOCRNricData = {
     idNumber: "",
     name: "",
-    dateOfBirth: new Date(),
+    dateOfBirth: "",
     address: "",
     placeOfBirth: "",
     postCode: "",
@@ -44,32 +61,20 @@ const HomeScreen = () => {
     gender: "",
     country: "Malaysia",
   };
-  const [active, setActive] = useState(true);
   const [imageSource, setImageSource] = useState("");
   const [flash, setFlash] = useState<boolean>(false);
   const [isScannedFront, setIsScannedFront] = useState<boolean>(false);
-  const [NRICCard, setNRICCard] = useState<IOCRNricData>();
+  const [isScannedBack, setIsScannedBack] = useState<boolean>(false);
+  const [isScannedValid, setIsScannedValid] = useState<boolean>(false);
+  const [NRICCard, setNRICCard] = useState<IOCRNricData>(mykad);
   const devices = useCameraDevices();
+  const isFocused = useIsFocused();
   const device = devices.back;
   const navigation: RootNavigationProp = useNavigation();
   const camera = useRef<Camera>(null);
-
-  // const cameraValidation = async (): Promise<string> => {
-  //   const cameraPermission = await Camera.getCameraPermissionStatus();
-
-  //   switch (cameraPermission) {
-  //     case "authorized":
-  //       return "Your app is authorized to use said permission.";
-  //     case "not-determined":
-  //       return "";
-  //     case "denied":
-  //       return "Your app has already requested permissions from the user, but was explicitly denied. You cannot use the request functions again,";
-  //     case "restricted":
-  //       return "(iOS only) Your app cannot use the Camera or Microphone because that functionality has been restricted, possibly due to active restrictions such as parental controls being in place.";
-  //   }
-  // };
-  // const validate = cameraValidation();
-
+  const { currentStep, myKad } = useContext(GlobalContext);
+  console.log("currentStep in homeScreen", currentStep);
+  console.log("mykad in HomeScreen", myKad);
   const getPermission = useCallback(async () => {
     const permission = await Camera.requestCameraPermission();
     console.log("permission status ", permission);
@@ -81,31 +86,44 @@ const HomeScreen = () => {
       const capture = await camera.current.takePhoto({
         flash: flash ? "on" : "off",
       });
-      setImageSource(capture.path);
-      setActive(!active);
-      console.log(capture.path);
+
+      if (capture.path !== "" && isScannedValid === true) {
+        setImageSource(capture.path);
+        // console.log(capture.path);
+        navigation.navigate("InfoScreen", { mykad: NRICCard, imageSource: capture.path, currentStep: currentStep });
+      }
     }
   };
   const NRICcardFront = async (frame: TOCRFrame) => {
     let blocks = frame.result.blocks;
+    console.log("lenngth", blocks.length);
+    // console.log("frame", frame);
+    if (blocks === undefined) {
+      setIsScannedValid(false);
+      return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
+    }
 
-    if (blocks.length > 0 && frame.result.text.toLowerCase().includes("mykad")) {
+    if (blocks.length <= 10 && blocks.length >= 5 && frame.result.text.toLowerCase().includes("mykad")) {
+      console.log(" mykad valid");
+
+      // Validation of NRIC
       blocks.forEach((block, blockIndex) => {
         block.lines.forEach((textLine, lineIndex) => {
-          textLine.elements.forEach((element) => {
+          textLine.elements.forEach((element, elementIndex) => {
             // no ic
             if (element.text.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
+              setIsScannedValid(true);
               mykad.idNumber = element.text;
               const nricDate = moment(element.text.substring(0, 6), NRIC_DATE_FORMAT);
-              const capturedDate = nricDate.isValid() ? nricDate : null;
+              const capturedDate = nricDate.isAfter()
+                ? nricDate.subtract(100, "years").format("DD-MM-YYYY")
+                : nricDate.format("DD-MM-YYYY");
               const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === element.text.substring(7, 9));
               mykad.placeOfBirth = placeOfBirth?.location;
-              if (capturedDate === null) {
-                return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC } };
-              } else {
-                mykad.dateOfBirth = moment(capturedDate).isAfter() ? capturedDate.subtract(100, "years").toDate() : capturedDate.toDate();
-                mykad.name = blocks[blockIndex + 1].text; // next block should be name
-              }
+              mykad.dateOfBirth = capturedDate;
+              console.log("next blocks", blocks[blockIndex + 1].text);
+              mykad.name = blocks[blockIndex + 1].text;
+              // next block should be name
             } else if (element.text.match("[0-9]{5}")) {
               mykad.postCode = element.text;
               if (mykad.postCode !== null) {
@@ -130,28 +148,41 @@ const HomeScreen = () => {
                   mykad.state = titleCaseString(state);
                 }
               }
-
+              console.log("address", block.text);
               mykad.address = block.text;
-              mykad.city = element.text.substring(6);
+              //  mykad.city = element.text.substring(0, 6);
               mykad.state = block.lines[lineIndex + 1].text;
+            } else if (element.text.toLowerCase() === "lelaki") {
+              mykad.gender = "Male";
+            } else if (element.text.toLowerCase() === "perempuan") {
+              mykad.gender = "Female";
             }
-            return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA } };
+
+            // setIsScannedValid(true);
+            // return { mykad: mykad, validFront: true };
+
+            //    return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
           });
         });
       });
       console.log("nric valid");
-      setNRICCard({ ...mykad });
+      setNRICCard(mykad);
+      setIsScannedValid(true);
       return { mykad: mykad, validFront: true };
     } else {
-      return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC, validFront: false } };
+      console.log("not a valid nric");
+      setIsScannedValid(false);
+      return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
     }
   };
 
   const nricCardBack = async (frame: TOCRFrame) => {
     const processed = frame.result;
+    console.log(`CONTEXT:${myKad.idNumber}`);
     if (processed.blocks.length > 0 && processed.text.toLowerCase().includes("pendaftaran negara")) {
-      if (mykad.idNumber) {
-        if (processed.text.includes(mykad.idNumber?.toString())) {
+      if (myKad.idNumber) {
+        if (processed.text.includes(myKad.idNumber)) {
+          console.log(processed.text);
           return { validBack: true };
         } else return { validBack: false };
       }
@@ -160,27 +191,49 @@ const HomeScreen = () => {
     return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC, validBack: false } };
   };
 
+  //render function to validate Is NricCard
   const isValidNricCard = async (frame: TOCRFrame) => {
     const cardFront = NRICcardFront(frame);
     const cardBack = nricCardBack(frame);
+    console.log(currentStep);
+    if (currentStep === "Back") {
+      console.log("run cardBack function");
+      if ((await cardBack).validBack === true) {
+        setIsScannedValid(true);
+        setIsScannedBack(true);
+      } else {
+        setIsScannedValid(false);
+        setIsScannedBack(false);
+      }
+    } else if (currentStep === "Front") {
+      if ((await cardFront)?.error) {
+        setIsScannedValid(false);
+      } else if ((await cardFront).validFront) {
+        if ((await cardFront)?.validFront === true) {
+          setIsScannedValid(true);
+          setIsScannedFront(true);
 
-    if ((await cardFront) && (await cardBack)) {
-      if ((await cardFront).validFront === true) {
-        console.log("cardFront is valid");
-
-        setIsScannedFront(true);
-        if ((await cardBack).validBack === true) {
-          console.log("cardBack is valid");
+          console.log("cardFront is valid");
         }
+      } else {
+        console.log("currentStep : ", currentStep);
       }
-      if ((await cardFront).validFront && (await cardBack).validBack) {
-        navigation.navigate("InfoScreen");
-      }
-    } else console.log("not exist");
+    }
   };
+
   const frameProcessor = useFrameProcessor(
     (frame) => {
       "worklet";
+      // let squareSize = frame.width * FRAMERATIO.width - 100;
+
+      // const scanFrame: TFrame = {
+      //   height: squareSize,
+      //   width: squareSize,
+      //   isValid: frame.isValid,
+      //   bytesPerRow: frame.bytesPerRow,
+      //   planesCount: frame.planesCount,
+      //   close: () => frame.toString(),
+      // };
 
       const scannedOcr = scanOCR(frame);
 
@@ -216,120 +269,154 @@ const HomeScreen = () => {
     },
     [scanOCR, OCRUtils],
   );
+  const OCRSCANNER = "OCRSCANNER";
+  const progress = 34.5;
+
+  const getData = async () => {
+    const progressChecker = await ProgressChecker(OCRSCANNER, imageSource, false, progress);
+    return progressChecker;
+  };
 
   useEffect(() => {
     // Handler
+    getData();
     getPermission();
   }, []);
 
   return (
-    <View style={{ backgroundColor: OXFORDBLUE, flex: 1, paddingVertical: 120 }}>
+    <View style={{ backgroundColor: OXFORDBLUE, flex: 1 }}>
+      <ItemSeparator height={h72} />
+      <Stepper color={WHITE} progress={progress} invertBackground={ROSERED} nextProgress={OCRSCANNER} filePath={imageSource} />
+      <ItemSeparator height={h64} />
       <View
         style={{
-          justifyContent: "center",
-          alignSelf: "center",
           alignItems: "center",
-          paddingHorizontal: 120,
           backgroundColor: OVERLAY,
-          paddingVertical: 40,
+          height: h360,
         }}>
-        <View style={{ width: 120, height: 24 }}>
-          <Text style={{ backgroundColor: ORANGE, color: PRIMARY }}> Scanned: {isScannedFront ? "Back IC" : "Front IC"}</Text>
-        </View>
-        <CornerMarker color={BORDERCOLOUR} height={setHeight(27)} width={setWidth(95)} borderRadius={12} borderLength={38} thickness={3}>
-          {device !== null && device !== undefined ? (
-            <Camera
-              style={{ width: setWidth(90), height: setHeight(25), borderRadius: 8 }}
-              device={device}
-              isActive={active}
-              ref={camera}
-              photo
-              frameProcessor={frameProcessor}
-            />
-          ) : (
-            <View style={{ backgroundColor: ROSERED }}>
-              <Text>LOADING...</Text>
+        <Text
+          style={{
+            color: isScannedValid ? BORDERCOLOUR : ROSERED,
+            textAlign: "center",
+            fontFamily: POPPINS_BLACK,
+          }}>
+          {isScannedValid ? "good placement!" : "Correct the placement of MyKad!"}
+        </Text>
+
+        <View style={{ paddingVertical: h72, paddingHorizontal: w24 }}>
+          <CornerMarker
+            color={isScannedValid === true ? BORDERCOLOUR : ROSERED}
+            height={FRAMERATIO.height + h5}
+            width={FRAMERATIO.width + w5}
+            borderRadius={16}
+            borderLength={48}
+            thickness={8}>
+            <View style={{ width: FRAMERATIO.width, height: FRAMERATIO.height }}>
+              {device !== null && device !== undefined ? (
+                <Camera
+                  style={{ height: "100%", width: "100%", borderRadius: 16 }}
+                  device={device}
+                  isActive={isFocused}
+                  ref={camera}
+                  photo
+                  frameProcessor={frameProcessor}
+                />
+              ) : (
+                <View
+                  style={{
+                    backgroundColor: ROSERED,
+                    borderRadius: 50,
+                    width: w100,
+                    alignItems: "center",
+                    alignSelf: "center",
+                  }}>
+                  <Text>Loading...</Text>
+                </View>
+              )}
             </View>
-          )}
-        </CornerMarker>
+          </CornerMarker>
+        </View>
+
         {/* Render bottom components */}
       </View>
-      <ItemSeparator height={h5} />
-      <View style={{ justifyContent: "center", width: "100%", flexDirection: "column" }}>
-        <Text style={{ color: WHITE, textAlign: "center", fontSize: 16, fontWeight: "800" }}>Front of your ID</Text>
+      <ItemSeparator height={h28} />
+      <View style={{ alignItems: "center", paddingHorizontal: w82 }}>
+        <Text style={{ color: WHITE, fontSize: 16, fontWeight: "800", lineHeight: h20, fontFamily: POPPINS_BLACK }}>
+          {`${currentStep} of your ID`}
+        </Text>
+
         <Text
           style={{
             color: WHITE,
-            paddingTop: 12,
-            fontSize: 14,
-            width: w100,
-            textAlignVertical: "center",
+            paddingTop: h16,
+            width: w226,
+            fontSize: 12,
+            fontWeight: "400",
             textAlign: "center",
-            fontWeight: "500",
-            paddingHorizontal: 50,
-            justifyContent: "center",
-          }}
-          numberOfLines={3}>
+            fontFamily: POPPINS_BLACK,
+          }}>
           Place card on dark background for best results. Your entire ID must be in the frame and remove any cover.
         </Text>
-        <View style={{ alignItems: "center", paddingTop: 24 }}>
-          <Text style={{ color: ORANGE, fontWeight: "600" }}>PHOTO</Text>
-        </View>
-        <View style={{ justifyContent: "space-around", flexDirection: "row" }}>
-          <TouchableOpacity
-            onPress={() => setFlash(!flash)}
-            style={{
-              ...bottomIconStyle,
-            }}>
-            <Icon name="flash-outline" size={24} color={WHITE} />
-          </TouchableOpacity>
 
-          <TouchableOpacity onPress={captureCamera}>
-            <View
-              style={{
-                width: 60,
-                height: 60,
-                justifyContent: "center",
-                borderRadius: 50,
-                position: "absolute",
-                backgroundColor: WHITE,
-                top: h2,
-                zIndex: -1,
-                borderStyle: "solid",
-                borderColor: SECONDARY,
-                alignSelf: "center",
-              }}>
-              <View>
-                <View
-                  style={{
-                    width: 55,
-                    height: 55,
-                    borderRadius: 50,
-                    backgroundColor: WHITE,
-                    borderStyle: "solid",
-                    borderColor: SECONDARY,
-                    alignSelf: "center",
-                    borderWidth: 3,
-                  }}></View>
-              </View>
-            </View>
+        <Text
+          style={{
+            color: ORANGE,
+            fontWeight: "400",
+            paddingTop: h25,
+            alignItems: "center",
+            alignSelf: "center",
+            fontFamily: POPPINS_BLACK,
+          }}>
+          PHOTO
+        </Text>
+      </View>
+      <ItemSeparator height={h16} />
+      <View style={{ justifyContent: "space-between", flexDirection: "row", paddingHorizontal: w48 }}>
+        <View>
+          <ItemSeparator height={h12} />
+          <TouchableOpacity onPress={() => setFlash(!flash)} style={{}}>
+            <Icon name="flash-outline" color={WHITE} style={{ fontSize: 32 }} />
           </TouchableOpacity>
-          <TouchableOpacity
+        </View>
+
+        <TouchableOpacity onPress={captureCamera} disabled={isScannedValid === true ? false : true}>
+          <View
             style={{
-              ...bottomIconStyle,
+              alignSelf: "center",
+              backgroundColor: WHITE,
+              borderColor: SECONDARY,
+              borderRadius: 50,
+              borderStyle: "solid",
+              height: 70,
+              justifyContent: "center",
+              position: "absolute",
+              width: 70,
+              zIndex: -1,
             }}>
-            <Icon name="camera-reverse-outline" size={24} color={WHITE} />
+            <View>
+              <View
+                style={{
+                  alignSelf: "center",
+                  backgroundColor: WHITE,
+                  borderColor: SECONDARY,
+                  borderRadius: 50,
+                  borderStyle: "solid",
+                  borderWidth: 2,
+                  height: 58,
+                  width: 58,
+                }}></View>
+            </View>
+          </View>
+        </TouchableOpacity>
+        <View>
+          <ItemSeparator height={h12} />
+          <TouchableOpacity style={{}}>
+            <Icon name="camera-reverse-outline" color={WHITE} style={{ fontSize: 32 }} />
           </TouchableOpacity>
         </View>
       </View>
     </View>
   );
-};
-
-const bottomIconStyle: ViewStyle = {
-  top: h4,
-  justifyContent: "center",
-  alignSelf: "auto",
 };
 
 export default HomeScreen;

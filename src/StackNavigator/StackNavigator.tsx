@@ -8,7 +8,9 @@ export const RootStack = createNativeStackNavigator<RootStackParamList>();
 export const StackNavigator = () => {
   return (
     <>
-      <RootStack.Navigator screenOptions={{ headerShown: false, animation: "fade_from_bottom", animationTypeForReplace: "push" }}>
+      <RootStack.Navigator
+        screenOptions={{ headerShown: false, animation: "fade_from_bottom", animationTypeForReplace: "push" }}
+        initialRouteName="HomeScreen">
         <RootStack.Group>
           <RootStack.Screen name="HomeScreen" component={HomeScreen} />
           <RootStack.Screen name="InfoScreen" component={InfoScreen} />

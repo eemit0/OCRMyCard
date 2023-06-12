@@ -1,9 +1,9 @@
 declare type RootStackParamList = {
-  HomeScreen: undefined;
+  HomeScreen: { currentStep: string };
   CameraFrame: undefined;
-  InfoScreen: undefined;
+  InfoScreen: { mykad: IOCRNricData; imageSource: string; currentStep: string };
 };
-declare type Frame = import("react-native-vision-camera").Frame;
+declare type TFrame = import("react-native-vision-camera").Frame;
 
 declare type RootNavigationProp = import("@react-navigation/native-stack").NativeStackNavigationProp<RootStackParamList>;
 
@@ -16,7 +16,7 @@ declare interface IOCRNricData {
   address?: string;
   city?: string;
   country?: string;
-  dateOfBirth?: Date;
+  dateOfBirth?: string;
   error?: IOCRError;
   gender?: string;
   idNumber?: string;
@@ -24,6 +24,13 @@ declare interface IOCRNricData {
   placeOfBirth?: string;
   postCode?: string;
   state?: string;
+}
+
+declare interface IProgressData {
+  imgSource: string;
+  name: string;
+  progressAchieve: number;
+  valid: boolean;
 }
 
 declare type TBoundingFrame = {
