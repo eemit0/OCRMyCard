@@ -8,15 +8,6 @@ import {
   BORDERCOLOUR,
   DICTIONARY_PLACE_OF_BIRTH,
   FRAMERATIO,
-  ItemSeparator,
-  NRIC_DATE_FORMAT,
-  ORANGE,
-  OVERLAY,
-  OXFORDBLUE,
-  POPPINS_BLACK,
-  ProgressChecker,
-  ROSERED,
-  WHITE,
   h12,
   h16,
   h20,
@@ -26,6 +17,14 @@ import {
   h5,
   h64,
   h72,
+  ItemSeparator,
+  NRIC_DATE_FORMAT,
+  ORANGE,
+  OVERLAY,
+  OXFORDBLUE,
+  POPPINS_BLACK,
+  ProgressChecker,
+  ROSERED,
   titleCaseString,
   w100,
   w226,
@@ -33,6 +32,7 @@ import {
   w48,
   w5,
   w82,
+  WHITE,
 } from "../constants";
 import { runOnJS } from "react-native-reanimated";
 import { scanOCR } from "vision-camera-ocr";
@@ -45,36 +45,23 @@ import { Stepper } from "../Stepper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { GlobalContext } from "../Context";
 
-interface IHomeScreenProps extends NativeStackScreenProps<RootStackParamList, "HomeScreen"> {
-  currentStep: string;
-}
+interface IHomeScreenProps extends NativeStackScreenProps<RootStackParamList, "HomeScreen"> {}
 const HomeScreen = ({}: IHomeScreenProps) => {
-  let mykad: IOCRNricData = {
-    idNumber: "",
-    name: "",
-    dateOfBirth: "",
-    address: "",
-    placeOfBirth: "",
-    postCode: "",
-    city: "",
-    state: "",
-    gender: "",
-    country: "Malaysia",
-  };
   const [imageSource, setImageSource] = useState("");
   const [flash, setFlash] = useState<boolean>(false);
   const [isScannedFront, setIsScannedFront] = useState<boolean>(false);
   const [isScannedBack, setIsScannedBack] = useState<boolean>(false);
   const [isScannedValid, setIsScannedValid] = useState<boolean>(false);
-  const [NRICCard, setNRICCard] = useState<IOCRNricData>(mykad);
+  const [NRICCard, setNRICCard] = useState<IOCRNricData>({});
   const devices = useCameraDevices();
   const isFocused = useIsFocused();
   const device = devices.back;
   const navigation: RootNavigationProp = useNavigation();
   const camera = useRef<Camera>(null);
-  const { currentStep, myKad } = useContext(GlobalContext);
+  const { currentStep, myKad: contextMyKad } = useContext(GlobalContext);
   console.log("currentStep in homeScreen", currentStep);
-  console.log("mykad in HomeScreen", myKad);
+  //  console.log("mykad in HomeScreen", contextMyKad);
+
   const getPermission = useCallback(async () => {
     const permission = await Camera.requestCameraPermission();
     console.log("permission status ", permission);
@@ -90,99 +77,110 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       if (capture.path !== "" && isScannedValid === true) {
         setImageSource(capture.path);
         // console.log(capture.path);
-        navigation.navigate("InfoScreen", { mykad: NRICCard, imageSource: capture.path, currentStep: currentStep });
+        if (NRICCard !== null) {
+          navigation.navigate("InfoScreen", { mykad: NRICCard, imageSource: capture.path, currentStep: currentStep });
+        }
       }
     }
   };
   const NRICcardFront = async (frame: TOCRFrame) => {
-    let blocks = frame.result.blocks;
-    console.log("lenngth", blocks.length);
-    // console.log("frame", frame);
-    if (blocks === undefined) {
-      setIsScannedValid(false);
-      return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
-    }
+    let mykad: IOCRNricData = {
+      idNumber: "",
+      name: "",
+      dateOfBirth: "",
+      address: "",
+      placeOfBirth: "",
+      postCode: "",
+      city: "",
+      state: "",
+      gender: "",
+      country: "Malaysia",
+    };
+    const blocks = frame.result.blocks;
+    // console.log("length", blocks.length);
 
-    if (blocks.length <= 10 && blocks.length >= 5 && frame.result.text.toLowerCase().includes("mykad")) {
-      console.log(" mykad valid");
-
-      // Validation of NRIC
-      blocks.forEach((block, blockIndex) => {
-        block.lines.forEach((textLine, lineIndex) => {
-          textLine.elements.forEach((element, elementIndex) => {
-            // no ic
-            if (element.text.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
-              setIsScannedValid(true);
-              mykad.idNumber = element.text;
-              const nricDate = moment(element.text.substring(0, 6), NRIC_DATE_FORMAT);
-              const capturedDate = nricDate.isAfter()
-                ? nricDate.subtract(100, "years").format("DD-MM-YYYY")
-                : nricDate.format("DD-MM-YYYY");
-              const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === element.text.substring(7, 9));
-              mykad.placeOfBirth = placeOfBirth?.location;
-              mykad.dateOfBirth = capturedDate;
-              console.log("next blocks", blocks[blockIndex + 1].text);
-              mykad.name = blocks[blockIndex + 1].text;
-              // next block should be name
-            } else if (element.text.match("[0-9]{5}")) {
-              mykad.postCode = element.text;
-              if (mykad.postCode !== null) {
-                let postCodeIndex = -1;
-                const split = block.text.split("\n");
-                const postCodeCity = split.filter((value, index) => {
-                  postCodeIndex = index;
-                  return value.match("^[0-9]{4,5}");
-                });
-                const [postCode] = postCodeCity[0].split(" ");
-                const [state] = split.slice(-1);
-                mykad.postCode = postCode;
-                mykad.city = titleCaseString(postCodeCity[0].split(" ").slice(1).join(" "));
-                mykad.address = split.slice(0, postCodeIndex - 1).join(" ");
-                if (state.toLowerCase().includes("kl")) {
-                  mykad.state = "Wilayah Persekutuan";
-                } else if (state.toLowerCase().includes("putra")) {
-                  mykad.state = "Wilayah Persekutuan Putrajaya";
-                } else if (state.toLowerCase().includes("labuan")) {
-                  mykad.state = "Wilayah Persekutuan Labuan";
-                } else {
-                  mykad.state = titleCaseString(state);
-                }
-              }
-              console.log("address", block.text);
-              mykad.address = block.text;
-              //  mykad.city = element.text.substring(0, 6);
-              mykad.state = block.lines[lineIndex + 1].text;
-            } else if (element.text.toLowerCase() === "lelaki") {
-              mykad.gender = "Male";
-            } else if (element.text.toLowerCase() === "perempuan") {
-              mykad.gender = "Female";
-            }
-
-            // setIsScannedValid(true);
-            // return { mykad: mykad, validFront: true };
-
-            //    return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
-          });
-        });
-      });
-      console.log("nric valid");
-      setNRICCard(mykad);
-      setIsScannedValid(true);
-      return { mykad: mykad, validFront: true };
-    } else {
+    if (!blocks || blocks.length < 5 || blocks.length > 10 || !frame.result.text.toLowerCase().includes("mykad")) {
       console.log("not a valid nric");
       setIsScannedValid(false);
       return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
+    } else {
+      for (const block of blocks) {
+        for (const textLine of block.lines) {
+          for (const element of textLine.elements) {
+            const text = element.text;
+            if (text.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
+              mykad.idNumber = text;
+              const nricDate = moment(text.substring(0, 6), NRIC_DATE_FORMAT);
+              const capturedDate = nricDate.isAfter()
+                ? nricDate.subtract(100, "years").format("DD-MM-YYYY")
+                : nricDate.format("DD-MM-YYYY");
+              const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === text.substring(7, 9));
+              mykad.placeOfBirth = placeOfBirth?.location;
+              mykad.dateOfBirth = capturedDate;
+              const blockName = blocks[blocks.indexOf(block) + 1]?.text;
+              if (
+                blockName.toLowerCase() !== "warganegara" &&
+                blockName.toLowerCase() !== "islam" &&
+                blockName.toLowerCase() !== "warganegara islam"
+              ) {
+                mykad.name = blockName;
+              }
+              // if (blockName && !blockName.toLowerCase().includes("warganegara islam lelaki")) {
+              //   console.log("blockName", blockName);
+              //   mykad.name = blockName;
+              // }
+            } else if (text.match("[0-9]{5}")) {
+              mykad.postCode = text;
+              const split = block.text.split("\n");
+              const postCodeCity = split.filter((value, index) => {
+                return value.match("^[0-9]{4,5}");
+              });
+              const [postcode] = postCodeCity[0].split(" ");
+
+              let [state] = split.slice(-1);
+              mykad.postCode = postcode;
+              mykad.city = titleCaseString(postCodeCity[0].split(" ").slice(1).join(" "));
+              // mykad.address = split.slice(0, postCodeCity[0].indexOf(postcode)).join(" ");
+              mykad.address = block.text;
+              //  console.log("address", block.text);
+              if (state.toLowerCase().includes("kl")) {
+                mykad.state = "Wilayah Persekutuan";
+              } else if (state.toLowerCase().includes("putra")) {
+                mykad.state = "Wilayah Persekutuan Putrajaya";
+              } else if (state.toLowerCase().includes("labuan")) {
+                mykad.state = "Wilayah Persekutuan Labuan";
+              } else {
+                mykad.state = titleCaseString(state);
+              }
+            } else if (text.toLowerCase() === "lelaki") {
+              mykad.gender = "Male";
+            } else if (text.toLowerCase() === "perempuan") {
+              mykad.gender = "Female";
+            }
+          }
+        }
+      }
     }
+
+    if (!mykad.idNumber || !mykad.name) {
+      console.log("invalid nric data");
+      setIsScannedValid(false);
+      return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
+    }
+
+    console.log("nric valid");
+    //setNRICCard(mykad);
+    setIsScannedValid(true);
+    return { mykad, validFront: true };
   };
 
   const nricCardBack = async (frame: TOCRFrame) => {
     const processed = frame.result;
-    console.log(`CONTEXT:${myKad.idNumber}`);
+    console.log("ic no", contextMyKad);
     if (processed.blocks.length > 0 && processed.text.toLowerCase().includes("pendaftaran negara")) {
-      if (myKad.idNumber) {
-        if (processed.text.includes(myKad.idNumber)) {
-          console.log(processed.text);
+      if (contextMyKad.idNumber) {
+        if (processed.text.includes(contextMyKad.idNumber)) {
+          //    console.log(processed.text);
           return { validBack: true };
         } else return { validBack: false };
       }
@@ -193,12 +191,13 @@ const HomeScreen = ({}: IHomeScreenProps) => {
 
   //render function to validate Is NricCard
   const isValidNricCard = async (frame: TOCRFrame) => {
-    const cardFront = NRICcardFront(frame);
-    const cardBack = nricCardBack(frame);
+    const cardFront = await NRICcardFront(frame);
+
     console.log(currentStep);
     if (currentStep === "Back") {
-      console.log("run cardBack function");
-      if ((await cardBack).validBack === true) {
+      const cardBack = await nricCardBack(frame);
+      console.log("running cardBack function");
+      if (cardBack.validBack === true) {
         setIsScannedValid(true);
         setIsScannedBack(true);
       } else {
@@ -206,18 +205,21 @@ const HomeScreen = ({}: IHomeScreenProps) => {
         setIsScannedBack(false);
       }
     } else if (currentStep === "Front") {
-      if ((await cardFront)?.error) {
+      if (cardFront?.error) {
         setIsScannedValid(false);
-      } else if ((await cardFront).validFront) {
-        if ((await cardFront)?.validFront === true) {
+      } else if (cardFront.validFront) {
+        if (cardFront?.validFront === true) {
+          const mykad = cardFront.mykad;
+          console.log("name", mykad.name);
+          setNRICCard(mykad);
           setIsScannedValid(true);
           setIsScannedFront(true);
 
-          console.log("cardFront is valid");
+          //  console.log("cardFront is valid");
         }
-      } else {
-        console.log("currentStep : ", currentStep);
       }
+    } else {
+      console.log("currentStep : ", currentStep);
     }
   };
 
@@ -314,12 +316,15 @@ const HomeScreen = ({}: IHomeScreenProps) => {
             <View style={{ width: FRAMERATIO.width, height: FRAMERATIO.height }}>
               {device !== null && device !== undefined ? (
                 <Camera
-                  style={{ height: "100%", width: "100%", borderRadius: 16 }}
                   device={device}
-                  isActive={isFocused}
-                  ref={camera}
-                  photo
+                  enableHighQualityPhotos={true}
+                  enableZoomGesture={true}
                   frameProcessor={frameProcessor}
+                  isActive={isFocused}
+                  photo
+                  fps={30}
+                  ref={camera}
+                  style={{ height: "100%", width: "100%", borderRadius: 16 }}
                 />
               ) : (
                 <View

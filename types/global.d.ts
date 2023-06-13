@@ -1,6 +1,6 @@
 declare type RootStackParamList = {
-  HomeScreen: { currentStep: string };
   CameraFrame: undefined;
+  HomeScreen: undefined;
   InfoScreen: { mykad: IOCRNricData; imageSource: string; currentStep: string };
 };
 declare type TFrame = import("react-native-vision-camera").Frame;
@@ -34,39 +34,39 @@ declare interface IProgressData {
 }
 
 declare type TBoundingFrame = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
   boundingCenterX: number;
   boundingCenterY: number;
+  height: number;
+  width: number;
+  x: number;
+  y: number;
 };
 declare type Point = {
   x: number;
   y: number;
 };
 declare type TextElement = {
-  text: string;
-  frame: TBoundingFrame;
   cornerPoints: Point[];
+  frame: TBoundingFrame;
+  text: string;
 };
 declare type TextLine = {
-  text: string;
+  cornerPoints: Point[];
   elements: TextElement[];
   frame: TBoundingFrame;
   recognizedLanguages: string[];
-  cornerPoints: Point[];
+  text: string;
 };
 declare interface ITextBlock {
-  text: string;
-  lines: TextLine[];
-  frame: TBoundingFrame;
-  recognizedLanguages: string[];
   cornerPoints: Point[];
+  frame: TBoundingFrame;
+  lines: TextLine[];
+  recognizedLanguages: string[];
+  text: string;
 }
 declare interface IText {
-  text: string;
   blocks: ITextBlock[];
+  text: string;
 }
 declare interface TOCRFrame {
   result: IText;

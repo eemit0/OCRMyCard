@@ -12,23 +12,23 @@ interface GlobalProviderProps {
   children: React.ReactNode;
 }
 
-const mykad: IOCRNricData = {
-  idNumber: "",
-  name: "",
-  dateOfBirth: "",
-  address: "",
-  placeOfBirth: "",
-  postCode: "",
-  city: "",
-  state: "",
-  gender: "",
-  country: "Malaysia",
-};
+// const mykad: IOCRNricData = {
+//   idNumber: "",
+//   name: "",
+//   dateOfBirth: "",
+//   address: "",
+//   placeOfBirth: "",
+//   postCode: "",
+//   city: "",
+//   state: "",
+//   gender: "",
+//   country: "Malaysia",
+// };
 const initialState: IInitialState = {
   currentStep: "Front",
   currentProgress: 0.0,
   setProgress: () => Promise.resolve({ front: false, back: false }),
-  myKad: { ...mykad },
+  myKad: {},
 };
 
 export const GlobalContext = createContext<IInitialState>(initialState);
@@ -41,18 +41,18 @@ export const GlobalProvider = (props: React.PropsWithChildren<GlobalProviderProp
     let back: boolean = false;
     if (progressStep === "Front") {
       setState({ ...state, currentStep: progressStep, myKad: myKad });
-      console.log("Front card??", state.myKad);
+      front = true;
       return { front: true, back: false };
     }
 
     if (progressStep === "Back") {
       setState({ ...state, currentStep: progressStep, myKad: myKad });
-      console.log("Back card??", state.myKad);
+      front = true;
+      back = true;
       return { front: true, back: true };
     }
     console.log("current myKad info in context", state.myKad);
-    console.log("front valid", front);
-    console.log("back valid", back);
+
     return { front, back };
   };
 
