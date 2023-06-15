@@ -80,17 +80,17 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     videoStabilizationModes: [],
     videoWidth: 0,
   };
-  const format = useMemo(() => {
-    if (!device) return null;
+  // const format = useMemo(() => {
+  //   if (!device) return null;
 
-    const desiredHeight = 1080; // Specify the desired photo height
-    const desiredWidth = 1920; // Specify the desired photo width
+  //   const desiredHeight = 1080; // Specify the desired photo height
+  //   const desiredWidth = 1920; // Specify the desired photo width
 
-    // Find the format that matches the desired height and width
-    const desiredFormat = device.formats.find((f) => f.photoHeight === desiredHeight && f.photoWidth === desiredWidth);
+  //   // Find the format that matches the desired height and width
+  //   const desiredFormat = device.formats.find((f) => f.photoHeight === desiredHeight && f.photoWidth === desiredWidth);
 
-    return desiredFormat || device.formats[0]; // Fallback to the first available format if desired format not found
-  }, [device?.formats]);
+  //   return desiredFormat || device.formats[0]; // Fallback to the first available format if desired format not found
+  // }, [device?.formats]);
 
   const getPermission = useCallback(async () => {
     const permission = await Camera.requestCameraPermission();
@@ -114,8 +114,12 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       if (capture.path !== "" && isScannedValid === true) {
         setImageSource(capture.path);
         console.log(capture.path);
+        console.log("width:", capture.width);
+
+        console.log("height", capture.height);
+
         if (NRICCard !== null) {
-          timerId;
+          //timerId;
           navigation.navigate("InfoScreen", { mykad: NRICCard, imageSource: capture.path, currentStep: currentStep });
         }
       }
@@ -136,6 +140,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     };
     const blocks: ITextBlock[] = frame.result.blocks;
     const resultText: string = frame.result.text;
+    let isPlacementValid = false;
     // console.log("length", blocks.length);
 
     if (!blocks.find || blocks.length < 5 || blocks.length > 10 || !frame.result.text.toLowerCase().includes("mykad")) {
@@ -148,89 +153,100 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       const min = 350;
       const max = 357.75;
       const minY = 970.25;
-      const maxY = 980.75;
-      blocks.forEach((block) => {
-        if (
-          block.frame.x >= min &&
-          block.frame.x <= max &&
-          block.frame.y >= minY &&
-          block.frame.y <= maxY &&
-          block.text.toLowerCase() === "mykad"
-        ) {
-          console.log("myKad -->", block.text);
-          console.log("frame x", block.frame.x);
-          console.log("frame y", block.frame.y);
+      const maxY = 990.75;
 
-          block.lines.forEach((textLine) => {
-            textLine.elements.forEach((element) => {
-              const elementText = element.text;
-              if (elementText.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
-                mykad.idNumber = elementText;
-                const nricDate = moment(elementText.substring(0, 6), NRIC_DATE_FORMAT);
-                const capturedDate = nricDate.isAfter()
-                  ? nricDate.subtract(100, "years").format("DD-MM-YYYY")
-                  : nricDate.format("DD-MM-YYYY");
-                const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === elementText.substring(7, 9));
-                mykad.placeOfBirth = placeOfBirth?.location;
-                mykad.dateOfBirth = capturedDate;
-                const blockName =
-                  blocks[blocks.indexOf(block) + 1]?.text.length >= 1
-                    ? blocks[blocks.indexOf(block) + 1]?.text
-                    : blocks[blocks.indexOf(block)]?.text;
-                if (
-                  blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara" &&
-                  blockName.toLowerCase().replace(/\n/g, " ") !== "islam" &&
-                  blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara islam" &&
-                  blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara islam lelaki" &&
-                  !blockName.toLowerCase().replace(/\n/g, " ").includes("myKad")
-                ) {
-                  mykad.name = blockName.replace(/\n/g, " ");
-                }
-              } else if (elementText.match("[0-9]{5}")) {
-                mykad.postCode = elementText;
-                if (block.text) {
-                  const split = block.text.split("\n");
-                  const postCodeCity = split.filter((value, index) => {
-                    return value.match("^[0-9]{4,5}");
-                  });
-                  if (postCodeCity.length > 0) {
-                    const [postcode] = postCodeCity[0].split(" ");
-                    const [state] = split.slice(-1);
-                    mykad.postCode = postcode;
-                    mykad.city = titleCaseString(postCodeCity[0].split(" ").slice(1).join(" "));
-                    mykad.address = block.text.replace(/\n/g, " ");
-                    if (state.toLowerCase().includes("kl")) {
-                      mykad.state = "Wilayah Persekutuan";
-                    } else if (state.toLowerCase().includes("putra")) {
-                      mykad.state = "Wilayah Persekutuan Putrajaya";
-                    } else if (state.toLowerCase().includes("labuan")) {
-                      mykad.state = "Wilayah Persekutuan Labuan";
-                    } else {
-                      mykad.state = titleCaseString(state);
-                    }
+      blocks.forEach((block) => {
+        // if (
+        //   block.frame.x >= min &&
+        //   block.frame.x <= max &&
+        //   block.frame.y >= minY &&
+        //   block.frame.y <= maxY &&
+        //   block.text.toLowerCase() === "mykad"
+        // ) {
+        console.log("myKad -->", block.text);
+        console.log("frame x", block.frame.x);
+        console.log("frame y", block.frame.y);
+
+        block.lines.forEach((textLine) => {
+          textLine.elements.forEach((element) => {
+            const elementText = element.text;
+            if (elementText.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
+              mykad.idNumber = elementText;
+              const nricDate = moment(elementText.substring(0, 6), NRIC_DATE_FORMAT);
+              const capturedDate = nricDate.isAfter()
+                ? nricDate.subtract(100, "years").format("DD-MM-YYYY")
+                : nricDate.format("DD-MM-YYYY");
+              const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === elementText.substring(7, 9));
+              mykad.placeOfBirth = placeOfBirth?.location;
+              mykad.dateOfBirth = capturedDate;
+              const blockName =
+                blocks[blocks.indexOf(block) + 1]?.text.length >= 1
+                  ? blocks[blocks.indexOf(block) + 1]?.text
+                  : blocks[blocks.indexOf(block)]?.text;
+              if (
+                blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara" &&
+                blockName.toLowerCase().replace(/\n/g, " ") !== "islam" &&
+                blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara islam" &&
+                blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara islam lelaki" &&
+                !blockName.toLowerCase().replace(/\n/g, " ").includes("myKad")
+              ) {
+                mykad.name = blockName.replace(/\n/g, " ");
+              }
+            } else if (elementText.match("[0-9]{5}")) {
+              mykad.postCode = elementText;
+              if (block.text) {
+                const split = block.text.split("\n");
+                const postCodeCity = split.filter((value, index) => {
+                  return value.match("^[0-9]{4,5}");
+                });
+                if (postCodeCity.length > 0) {
+                  const [postcode] = postCodeCity[0].split(" ");
+                  const [state] = split.slice(-1);
+                  mykad.postCode = postcode;
+                  mykad.city = titleCaseString(postCodeCity[0].split(" ").slice(1).join(" "));
+                  mykad.address = block.text.replace(/\n/g, " ");
+                  if (state.toLowerCase().includes("kl")) {
+                    mykad.state = "Wilayah Persekutuan";
+                  } else if (state.toLowerCase().includes("putra")) {
+                    mykad.state = "Wilayah Persekutuan Putrajaya";
+                  } else if (state.toLowerCase().includes("labuan")) {
+                    mykad.state = "Wilayah Persekutuan Labuan";
+                  } else {
+                    mykad.state = titleCaseString(state);
                   }
                 }
-              } else if (elementText.toLowerCase() === "lelaki") {
-                mykad.gender = "Male";
-              } else if (elementText.toLowerCase() === "perempuan") {
-                mykad.gender = "Female";
               }
-            });
+            } else if (elementText.toLowerCase() === "lelaki") {
+              mykad.gender = "Male";
+            } else if (elementText.toLowerCase() === "perempuan") {
+              mykad.gender = "Female";
+            }
           });
-          setIsScannedValid(true);
-        }
+        });
+        console.log(mykad);
+        console.log("PERFECT FRAME!");
+        isPlacementValid = true;
+        //setIsScannedValid(isPlacementValid);
+        //}
       });
-    }
 
-    if (!mykad.idNumber || !mykad.name) {
-      console.log("invalid nric data");
-      setIsScannedValid(false);
-      return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
+      if (!isPlacementValid) {
+        console.log("invalid nric placement");
+        setIsScannedValid(false);
+        return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
+      }
+
+      if (!mykad.idNumber || !mykad.name) {
+        console.log("invalid nric data");
+        setIsScannedValid(false);
+        return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
+      }
+      console.log("isPlacement", isPlacementValid);
+      setIsScannedValid(isPlacementValid);
     }
 
     console.log("nric valid");
     //setNRICCard(mykad);
-    setIsScannedValid(true);
     return { mykad, validFront: true };
   };
 
@@ -263,17 +279,19 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       }
     } else if (currentStep === "Front") {
       const cardFront = await NRICCardFront(frame);
-      if (cardFront?.error) {
-        setIsScannedValid(false);
-      } else if (cardFront.validFront) {
-        if (cardFront?.validFront === true) {
-          const mykad = cardFront.mykad;
-          console.log("name", mykad.name);
-          setNRICCard(mykad);
-          setIsScannedValid(true);
-          setIsScannedFront(true);
+      if (cardFront) {
+        if (cardFront.error) {
+          setIsScannedValid(false);
+        } else if (cardFront.validFront) {
+          if (cardFront.validFront === true) {
+            const mykad = cardFront.mykad;
+            console.log("name", mykad.name);
+            setNRICCard(mykad);
+            setIsScannedValid(true);
+            setIsScannedFront(true);
 
-          //  console.log("cardFront is valid");
+            //  console.log("cardFront is valid");
+          }
         }
       }
     } else {
@@ -367,7 +385,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
           <CornerMarker
             color={isScannedValid === true ? BORDERCOLOUR : ROSERED}
             height={FRAMERATIO.height + h5}
-            width={FRAMERATIO.width + h5}
+            width={FRAMERATIO.width + w5}
             borderRadius={16}
             borderLength={48}
             thickness={8}>
@@ -382,7 +400,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
                   photo
                   frameProcessorFps={30}
                   ref={camera}
-                  format={format}
+                  // format={format}
                   style={{ height: FRAMERATIO.height, width: FRAMERATIO.width, borderRadius: 16 }}
                 />
               ) : (
