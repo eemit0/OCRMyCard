@@ -35,7 +35,7 @@ import {
   WHITE,
   width,
 } from "../constants";
-import { block, runOnJS } from "react-native-reanimated";
+import { runOnJS } from "react-native-reanimated";
 import { scanOCR } from "vision-camera-ocr";
 import { OCRUtils } from "../constants";
 import { SECONDARY } from "../constants";
@@ -143,109 +143,119 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     let isPlacementValid = false;
     // console.log("length", blocks.length);
 
-    if (!blocks.find || blocks.length < 5 || blocks.length > 10 || !frame.result.text.toLowerCase().includes("mykad")) {
+    const baseX = 355.5;
+    const baseY = 979;
+    const min = 350;
+    const max = 420.75;
+    const minY = 979.25;
+    const maxY = 1856.75;
+
+    //cleaner codes
+
+    const hasMyKad: ITextBlock[] = blocks.filter((eachBlock) => eachBlock.text.toLowerCase().includes("mykad"));
+
+    if (hasMyKad.length === 0) {
       console.log("not a valid nric");
       setIsScannedValid(false);
       return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
-    } else {
-      const baseX = 355.5;
-      const baseY = 979;
-      const min = 350;
-      const max = 357.75;
-      const minY = 970.25;
-      const maxY = 990.75;
+    }
+    const oneMyKadBlock: ITextBlock[] = hasMyKad.length > 0 ? [...hasMyKad].splice(0, 1) : [];
 
-      blocks.forEach((block) => {
-        // if (
-        //   block.frame.x >= min &&
-        //   block.frame.x <= max &&
-        //   block.frame.y >= minY &&
-        //   block.frame.y <= maxY &&
-        //   block.text.toLowerCase() === "mykad"
-        // ) {
-        console.log("myKad -->", block.text);
-        console.log("frame x", block.frame.x);
-        console.log("frame y", block.frame.y);
-
-        block.lines.forEach((textLine) => {
-          textLine.elements.forEach((element) => {
-            const elementText = element.text;
-            if (elementText.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
-              mykad.idNumber = elementText;
-              const nricDate = moment(elementText.substring(0, 6), NRIC_DATE_FORMAT);
-              const capturedDate = nricDate.isAfter()
-                ? nricDate.subtract(100, "years").format("DD-MM-YYYY")
-                : nricDate.format("DD-MM-YYYY");
-              const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === elementText.substring(7, 9));
-              mykad.placeOfBirth = placeOfBirth?.location;
-              mykad.dateOfBirth = capturedDate;
-              const blockName =
-                blocks[blocks.indexOf(block) + 1]?.text.length >= 1
-                  ? blocks[blocks.indexOf(block) + 1]?.text
-                  : blocks[blocks.indexOf(block)]?.text;
-              if (
-                blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara" &&
-                blockName.toLowerCase().replace(/\n/g, " ") !== "islam" &&
-                blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara islam" &&
-                blockName.toLowerCase().replace(/\n/g, " ") !== "warganegara islam lelaki" &&
-                !blockName.toLowerCase().replace(/\n/g, " ").includes("myKad")
-              ) {
-                mykad.name = blockName.replace(/\n/g, " ");
-              }
-            } else if (elementText.match("[0-9]{5}")) {
-              mykad.postCode = elementText;
-              if (block.text) {
-                const split = block.text.split("\n");
-                const postCodeCity = split.filter((value, index) => {
-                  return value.match("^[0-9]{4,5}");
-                });
-                if (postCodeCity.length > 0) {
-                  const [postcode] = postCodeCity[0].split(" ");
-                  const [state] = split.slice(-1);
-                  mykad.postCode = postcode;
-                  mykad.city = titleCaseString(postCodeCity[0].split(" ").slice(1).join(" "));
-                  mykad.address = block.text.replace(/\n/g, " ");
-                  if (state.toLowerCase().includes("kl")) {
-                    mykad.state = "Wilayah Persekutuan";
-                  } else if (state.toLowerCase().includes("putra")) {
-                    mykad.state = "Wilayah Persekutuan Putrajaya";
-                  } else if (state.toLowerCase().includes("labuan")) {
-                    mykad.state = "Wilayah Persekutuan Labuan";
-                  } else {
-                    mykad.state = titleCaseString(state);
-                  }
-                }
-              }
-            } else if (elementText.toLowerCase() === "lelaki") {
-              mykad.gender = "Male";
-            } else if (elementText.toLowerCase() === "perempuan") {
-              mykad.gender = "Female";
-            }
-          });
-        });
-        console.log(mykad);
-        console.log("PERFECT FRAME!");
-        isPlacementValid = true;
-        //setIsScannedValid(isPlacementValid);
-        //}
-      });
-
-      if (!isPlacementValid) {
-        console.log("invalid nric placement");
-        setIsScannedValid(false);
-        return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
-      }
-
-      if (!mykad.idNumber || !mykad.name) {
-        console.log("invalid nric data");
-        setIsScannedValid(false);
-        return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
-      }
-      console.log("isPlacement", isPlacementValid);
-      setIsScannedValid(isPlacementValid);
+    if (
+      !(
+        oneMyKadBlock.length > 0 &&
+        oneMyKadBlock[0].frame.x >= min &&
+        oneMyKadBlock[0].frame.x <= max &&
+        oneMyKadBlock[0].frame.y >= minY &&
+        oneMyKadBlock[0].frame.y <= maxY
+      )
+    ) {
+      return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
     }
 
-    console.log("nric valid");
+    blocks.forEach((block) => {
+      console.log("myKad -->", block.text);
+      console.log("frame x", block.frame.x);
+      console.log("frame y", block.frame.y);
+
+      block.lines.forEach((textLine) => {
+        textLine.elements.forEach((element) => {
+          const elementText = element.text;
+          if (elementText.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
+            mykad.idNumber = elementText;
+            const nricDate = moment(elementText.substring(0, 6), NRIC_DATE_FORMAT);
+            const capturedDate = nricDate.isAfter() ? nricDate.subtract(100, "years").format("DD-MM-YYYY") : nricDate.format("DD-MM-YYYY");
+            const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === elementText.substring(7, 9));
+            mykad.placeOfBirth = placeOfBirth?.location;
+            mykad.dateOfBirth = capturedDate;
+            if (blocks) {
+              const blockName: string =
+                blocks[blocks.indexOf(block) + 1].text.length >= 1
+                  ? blocks[blocks.indexOf(block) + 1].text
+                  : blocks[blocks.indexOf(block)].text;
+              let name = blockName.replace(/\n/g, "");
+              if (
+                name !== "warganegara" &&
+                name !== "islam" &&
+                name !== "warganegara islam" &&
+                name !== "warganegara islam lelaki" &&
+                !name.includes("myKad")
+              ) {
+                console.log(blockName);
+                mykad.name = name.toUpperCase();
+              }
+            }
+          } else if (elementText.match("[0-9]{5}")) {
+            mykad.postCode = elementText;
+            if (block.text) {
+              const split = block.text.split("\n");
+              const postCodeCity = split.filter((value) => {
+                return value.match("^[0-9]{4,5}");
+              });
+              if (postCodeCity.length > 0) {
+                const [postcode] = postCodeCity[0].split(" ");
+                const [state] = split.slice(-1);
+                mykad.postCode = postcode;
+                mykad.city = titleCaseString(postCodeCity[0].split(" ").slice(1).join(" "));
+                mykad.address = block.text.replace(/\n/g, " ");
+                if (state.toLowerCase().includes("kl")) {
+                  mykad.state = "Wilayah Persekutuan";
+                } else if (state.toLowerCase().includes("putra")) {
+                  mykad.state = "Wilayah Persekutuan Putrajaya";
+                } else if (state.toLowerCase().includes("labuan")) {
+                  mykad.state = "Wilayah Persekutuan Labuan";
+                } else {
+                  mykad.state = titleCaseString(state);
+                }
+              }
+            }
+          } else if (elementText.toLowerCase() === "lelaki") {
+            mykad.gender = "Male";
+          } else if (elementText.toLowerCase() === "perempuan") {
+            mykad.gender = "Female";
+          }
+        });
+      });
+      console.log(mykad);
+      console.log("PERFECT FRAME!");
+      isPlacementValid = true;
+      console.log("isPlacement", isPlacementValid);
+    });
+
+    if (!isPlacementValid) {
+      console.log("invalid nric placement");
+      setIsScannedValid(false);
+      return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
+    }
+
+    if ((mykad.idNumber === undefined && mykad.idNumber === null) || (mykad.name === undefined && mykad.name === null)) {
+      console.log("invalid nric data");
+      setIsScannedValid(false);
+      return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
+    }
+
+    setIsScannedValid(isPlacementValid);
+    console.log("NRIC_CARD is valid");
     //setNRICCard(mykad);
     return { mykad, validFront: true };
   };
@@ -400,7 +410,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
                   photo
                   frameProcessorFps={30}
                   ref={camera}
-                  // format={format}
+                  //format={format}
                   style={{ height: FRAMERATIO.height, width: FRAMERATIO.width, borderRadius: 16 }}
                 />
               ) : (
