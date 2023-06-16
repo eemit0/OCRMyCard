@@ -24,8 +24,6 @@ interface IInfoSection {
   currentStep: string;
 }
 export const InfoSection = ({ mykad, currentStep }: IInfoSection) => {
-  mykad.name = mykad.name?.replace(/\n/g, " ");
-  mykad.address = mykad.address?.replace(/\n/g, " ");
   return (
     <Fragment>
       {mykad !== undefined && currentStep === "Front" ? (
