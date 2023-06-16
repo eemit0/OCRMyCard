@@ -1,6 +1,7 @@
 declare type RootStackParamList = {
   CameraFrame: undefined;
   HomeScreen: undefined;
+  SummaryScreen: { imageSource: string; cropImageSource: string; mykad: IOCRNricData };
   InfoScreen: { mykad: IOCRNricData; imageSource: string; currentStep: string };
 };
 declare type TFrame = import("react-native-vision-camera").Frame;

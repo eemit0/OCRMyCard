@@ -2,14 +2,12 @@ import { Image, ScrollView, StatusBar, Text, TextStyle, TouchableOpacity, View, 
 import React, { useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import RNPhotoManipulator from "react-native-photo-manipulator";
+
 import {
   ACCENTBLUE,
   ACTIVE,
-  ItemSeparator,
-  ORANGE,
-  POPPINS_BLACK,
-  STEPBLUE,
-  WHITE,
+  FRAMERATIO,
   h136,
   h20,
   h204,
@@ -20,38 +18,76 @@ import {
   h40,
   h56,
   h660,
+  height,
+  ItemSeparator,
   minHeight,
+  ORANGE,
+  POPPINS_BLACK,
+  setHeight,
+  setWidth,
+  STEPBLUE,
   w24,
   w342,
+  WHITE,
+  width,
 } from "../constants";
 import { Stepper } from "../Stepper";
 import { InfoSection } from "../InfoSection.tsx";
 import { GlobalContext } from "../Context";
 
 interface IInfoScreenProps extends NativeStackScreenProps<RootStackParamList, "InfoScreen"> {
-  mykad: IOCRNricData;
-  imageSource: string;
   currentStep: string;
+  imageSource: string;
+  mykad: IOCRNricData;
 }
 
 const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
   const { mykad, imageSource, currentStep } = route.params;
   const { setProgress, myKad: contextMyKad } = useContext(GlobalContext);
-  console.log("context myKad", contextMyKad);
 
+  const cropImage = () => {
+    const image = imageSource;
+    const cropRegion = {
+      x: setWidth(10),
+      y: setHeight(1100) + FRAMERATIO.height,
+      height: setHeight(1380),
+      width: setWidth(2560) - FRAMERATIO.width,
+    };
+    const targetSize = { height: setHeight(63), width: FRAMERATIO.width };
+
+    RNPhotoManipulator.crop(image, cropRegion).then((path) => {
+      console.log(`results image path:,${path}`);
+      navigation.navigate("SummaryScreen", { imageSource: image, cropImageSource: path, mykad: contextMyKad });
+    });
+  };
   const setNextProgress = async (currentStep: string, mykad: IOCRNricData, nextStep: boolean) => {
-    const handleProgress = setProgress(currentStep, mykad);
-    if ((await handleProgress).front === true && (await handleProgress).back === true && nextStep === true) {
-      console.log("Mykad is valid and ready");
+    // const handleProgress = await setProgress(currentStep, mykad);
+    // if (handleProgress.front === true && handleProgress.back === true && nextStep === true) {
+    //   console.log("Mykad is valid and ready");
 
+    //repeat process
+    // navigation.push("HomeScreen", { currentStep: "Front" });
+    // } else {
+    //   console.log("setNextProgress", contextMyKad);
+    //   const handleProgressFront = await setProgress(currentStep, mykad);
+    //   const handleProgressBack = await setProgress("Back", contextMyKad);
+    //   nextStep === true ? handleProgressBack : handleProgressFront;
+    //   if (contextMyKad.idNumber !== "") {
+    //     navigation.push("HomeScreen", { currentStep: currentStep });
+    //   }
+    // }
+
+    const handleProgress = await setProgress(nextStep === true ? "Back" : currentStep, currentStep === "Back" ? contextMyKad : mykad);
+    console.log(handleProgress);
+    if (handleProgress.front === true && handleProgress.back === true && nextStep === true) {
+      console.log("handleProgress", handleProgress);
+      console.log("Mykad is valid and ready");
+      cropImage();
+      // setProgress("Front", {});
       //repeat process
-      navigation.push("HomeScreen", { currentStep: "Front" });
+      // navigation.push("HomeScreen", { currentStep: "Front" });
     } else {
-      console.log("setNextProgress", contextMyKad);
-      nextStep === true ? await setProgress("Back", contextMyKad) : await setProgress(currentStep, mykad);
-      if (contextMyKad.idNumber !== "") {
-        navigation.push("HomeScreen", { currentStep: currentStep });
-      }
+      navigation.push("HomeScreen");
     }
   };
 
@@ -78,26 +114,28 @@ const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
           minHeight: currentStep === "Front" ? minHeight : h660,
         }}
         indicatorStyle="black"
-        bounces={false}
-        style={{}}>
+        bounces={false}>
         <View
           style={{
             alignContent: "center",
             backgroundColor: ORANGE,
             borderRadius: 24,
-            height: 208,
+            height: h204,
             justifyContent: "center",
           }}>
           {imageSource !== "" ? (
             <Image
               source={{ uri: imageSource }}
+              resizeMode="contain"
               style={{
                 height: "100%",
                 width: "100%",
                 borderRadius: 24,
               }}
             />
-          ) : null}
+          ) : (
+            <Text style={{ fontFamily: POPPINS_BLACK, fontSize: 16, textAlign: "center" }}> No picture, please retake myKad photo!</Text>
+          )}
         </View>
 
         <ItemSeparator height={h38} />

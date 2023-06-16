@@ -8,7 +8,9 @@ export const setHeight = (h: number) => (height / baseHeight) * h;
 export const setWidth = (w: number) => (width / baseWidth) * w;
 
 //frame
-export const FRAMERATIO = { width: setWidth(342), height: setHeight(216) };
+export const FRAMERATIO = { width: Math.round(setWidth(342)), height: Math.round(setHeight(216)) };
+console.log("WIDTH:", FRAMERATIO.width);
+console.log("HEIGHT:", FRAMERATIO.height);
 
 //height
 export const h3 = setHeight(3);
@@ -74,3 +76,10 @@ export const w246 = setWidth(246);
 export const w14 = setWidth(14);
 export const w390 = setWidth(390);
 export const w42 = setWidth(42);
+
+export const baseX = 355.5;
+export const baseY = 979;
+export const min = 350;
+export const max = 357.75;
+export const minY = 970.25;
+export const maxY = 980.75;

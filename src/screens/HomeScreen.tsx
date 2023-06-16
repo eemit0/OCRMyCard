@@ -145,10 +145,10 @@ const HomeScreen = ({}: IHomeScreenProps) => {
 
     const baseX = 355.5;
     const baseY = 979;
-    const min = 350;
-    const max = 420.75;
-    const minY = 979.25;
-    const maxY = 1856.75;
+    const minX = 221.25;
+    const maxX = 381.25;
+    const minY = 954.75;
+    const maxY = 999.25;
 
     //cleaner codes
 
@@ -160,12 +160,13 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
     }
     const oneMyKadBlock: ITextBlock[] = hasMyKad.length > 0 ? [...hasMyKad].splice(0, 1) : [];
-
+    console.log("calculating range x", oneMyKadBlock[0].frame.x);
+    console.log("calculating range y", oneMyKadBlock[0].frame.y);
     if (
       !(
         oneMyKadBlock.length > 0 &&
-        oneMyKadBlock[0].frame.x >= min &&
-        oneMyKadBlock[0].frame.x <= max &&
+        oneMyKadBlock[0].frame.x >= minX &&
+        oneMyKadBlock[0].frame.x <= maxX &&
         oneMyKadBlock[0].frame.y >= minY &&
         oneMyKadBlock[0].frame.y <= maxY
       )
@@ -195,14 +196,14 @@ const HomeScreen = ({}: IHomeScreenProps) => {
                   : blocks[blocks.indexOf(block)].text;
               let name = blockName.replace(/\n/g, "");
               if (
-                name !== "warganegara" &&
-                name !== "islam" &&
-                name !== "warganegara islam" &&
-                name !== "warganegara islam lelaki" &&
-                !name.includes("myKad")
+                name.toLowerCase() !== "warganegara" &&
+                name.toLowerCase() !== "islam" &&
+                !name.toLowerCase().includes("myKadC") &&
+                !name.toLowerCase().includes("warganegara islam lelaki")
               ) {
-                console.log(blockName);
-                mykad.name = name.toUpperCase();
+                console.log(name);
+                mykad.name = blockName.replace(/\n/g, " ");
+                //   mykad.name = name.toUpperCase();
               }
             }
           } else if (elementText.match("[0-9]{5}")) {

@@ -41,14 +41,13 @@ export const GlobalProvider = (props: React.PropsWithChildren<GlobalProviderProp
     let back: boolean = false;
     if (progressStep === "Front") {
       setState({ ...state, currentStep: progressStep, myKad: myKad });
-      front = true;
+
       return { front: true, back: false };
     }
 
     if (progressStep === "Back") {
       setState({ ...state, currentStep: progressStep, myKad: myKad });
-      front = true;
-      back = true;
+
       return { front: true, back: true };
     }
     console.log("current myKad info in context", state.myKad);
