@@ -1,7 +1,7 @@
 import { Image, Text, View } from "react-native";
 import React from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ItemSeparator, ORANGE, h10, h100, h20, h204, w24 } from "../constants";
+import { ItemSeparator, ORANGE, POPPINS_BOLD, h10, h100, h20, h204, w24 } from "../constants";
 
 interface ISummaryScreenProps extends NativeStackScreenProps<RootStackParamList, "SummaryScreen"> {
   imageSource: string;
@@ -32,7 +32,7 @@ const SummaryScreen = ({ route }: ISummaryScreenProps) => {
         />
       </View>
       <ItemSeparator height={h10} />
-      <Text style={{ textAlign: "center" }}> THIS IS ORIGINAL IMAGE {imageSource}</Text>
+      <Text style={{ textAlign: "center", fontFamily: POPPINS_BOLD }}> THIS IS ORIGINAL IMAGE </Text>
 
       <ItemSeparator height={h20} />
       <View
@@ -45,7 +45,7 @@ const SummaryScreen = ({ route }: ISummaryScreenProps) => {
         }}>
         <Image
           source={{ uri: cropImageSource }}
-          resizeMode="contain"
+          resizeMode="stretch"
           style={{
             height: "100%",
             width: "100%",
@@ -54,7 +54,7 @@ const SummaryScreen = ({ route }: ISummaryScreenProps) => {
         />
       </View>
       <ItemSeparator height={h10} />
-      <Text style={{ textAlign: "center" }}> THIS IS CROP IMAGE {cropImageSource}</Text>
+      <Text style={{ textAlign: "center", fontFamily: POPPINS_BOLD }}> THIS IS CROP IMAGE </Text>
     </View>
   );
 };

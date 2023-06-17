@@ -148,8 +148,8 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     const baseY = 979;
     const myKadMinX = 352.5;
     const myKadMaxX = 391.75;
-    const myKadMinY = 952.75;
-    const myKadMaxY = 1057.25;
+    const myKadMinY = 967.75;
+    const myKadMaxY = 1000.25;
     const noIcMinX = 89.75;
     const noIcMaxX = 104.25;
     const noIcMinY = 1140.25;
