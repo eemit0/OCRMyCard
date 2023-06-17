@@ -18,6 +18,7 @@ import {
   h40,
   h56,
   h660,
+  hCrop,
   height,
   ItemSeparator,
   minHeight,
@@ -28,8 +29,10 @@ import {
   STEPBLUE,
   w24,
   w342,
+  WCrop,
   WHITE,
   width,
+  yPosition,
 } from "../constants";
 import { Stepper } from "../Stepper";
 import { InfoSection } from "../InfoSection.tsx";
@@ -48,15 +51,15 @@ const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
   const cropImage = () => {
     const image = imageSource;
     const cropRegion = {
-      x: setWidth(10),
-      y: setHeight(1100) + FRAMERATIO.height,
-      height: setHeight(1380),
-      width: setWidth(2560) - FRAMERATIO.width,
+      x: 8,
+      y: yPosition + FRAMERATIO.height,
+      height: hCrop,
+      width: WCrop - FRAMERATIO.width,
     };
     const targetSize = { height: setHeight(63), width: FRAMERATIO.width };
 
     RNPhotoManipulator.crop(image, cropRegion).then((path) => {
-      console.log(`results image path:,${path}`);
+      //console.log(`results image path:,${path}`);
       navigation.navigate("SummaryScreen", { imageSource: image, cropImageSource: path, mykad: contextMyKad });
     });
   };
@@ -126,7 +129,7 @@ const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
           {imageSource !== "" ? (
             <Image
               source={{ uri: imageSource }}
-              resizeMode="contain"
+              resizeMode="cover"
               style={{
                 height: "100%",
                 width: "100%",

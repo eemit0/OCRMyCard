@@ -99,7 +99,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
   }, []);
 
   const captureCamera = async () => {
-    const delay = 5000; // 5000 milliseconds (5 seconds)
+    const delay = 2000; // 5000 milliseconds (5 seconds)
 
     const timerId = setTimeout(() => {
       // Code to be executed after the delay
@@ -119,7 +119,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
         console.log("height", capture.height);
 
         if (NRICCard !== null) {
-          //timerId;
+          timerId;
           navigation.navigate("InfoScreen", { mykad: NRICCard, imageSource: capture.path, currentStep: currentStep });
         }
       }
@@ -138,6 +138,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       gender: "",
       country: "Malaysia",
     };
+    const wrongBlock: string[] = ["WARGANEGARA ISLAM", "ISLAM", "WARGANEGARA", "MYKADC", "WARGANEGARA ISLAM LELAKI"];
     const blocks: ITextBlock[] = frame.result.blocks;
     const resultText: string = frame.result.text;
     let isPlacementValid = false;
@@ -145,40 +146,70 @@ const HomeScreen = ({}: IHomeScreenProps) => {
 
     const baseX = 355.5;
     const baseY = 979;
-    const minX = 221.25;
-    const maxX = 381.25;
-    const minY = 954.75;
-    const maxY = 999.25;
+    const myKadMinX = 352.5;
+    const myKadMaxX = 450.75;
+    const myKadMinY = 974.75;
+    const myKadMaxY = 1369.25;
+    const noIcMinX = 985.75;
+    const noIcMaxX = 102.0;
+    const noIcMinY = 1070.25;
+    const noIcMaxY = 1155.5;
 
     //cleaner codes
 
     const hasMyKad: ITextBlock[] = blocks.filter((eachBlock) => eachBlock.text.toLowerCase().includes("mykad"));
+    const findMyIC: ITextBlock[] = blocks.filter((eachBlock) => eachBlock.text.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$"));
 
     if (hasMyKad.length === 0) {
       console.log("not a valid nric");
       setIsScannedValid(false);
       return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
     }
+    if (findMyIC.length === 0) {
+      console.log("cannot find IC blocks");
+      setIsScannedValid(false);
+      return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
+    }
+
     const oneMyKadBlock: ITextBlock[] = hasMyKad.length > 0 ? [...hasMyKad].splice(0, 1) : [];
-    console.log("calculating range x", oneMyKadBlock[0].frame.x);
-    console.log("calculating range y", oneMyKadBlock[0].frame.y);
+    const foundIC: ITextBlock[] = findMyIC.length > 0 ? [...findMyIC].splice(0, 1) : [];
+    console.log("calculating range of no myKad x", hasMyKad[0].frame.x);
+    console.log("calculating range of no myKad y", hasMyKad[0].frame.y);
+    // console.log("calculating range of no Ic x", findMyIC[0].frame.x);
+    // console.log("calculating range of no Ic y", findMyIC[0].frame.y);
+
+    //check position of mykad range
     if (
       !(
         oneMyKadBlock.length > 0 &&
-        oneMyKadBlock[0].frame.x >= minX &&
-        oneMyKadBlock[0].frame.x <= maxX &&
-        oneMyKadBlock[0].frame.y >= minY &&
-        oneMyKadBlock[0].frame.y <= maxY
+        oneMyKadBlock[0].frame.x >= myKadMinX &&
+        oneMyKadBlock[0].frame.x <= myKadMaxX &&
+        oneMyKadBlock[0].frame.y >= myKadMinY &&
+        oneMyKadBlock[0].frame.y <= myKadMaxY
       )
     ) {
       return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
     }
 
+    // check position of IC range
+    // if (
+    /////   !(
+    //     foundIC[0].frame.length > ) &&
+    //     foundIC[0].frame.x >= noIcMinX &&
+    //     foundIC[0].frame.x <= noIcMaxX &&
+    //     foundIC[0].frame.y >= noIcMinY &&
+    //     foundIC[0].frame.y <= noIcMaxY
+    //   )
+    // ) {
+    //   return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
+    // }
+
     blocks.forEach((block) => {
       console.log("myKad -->", block.text);
       console.log("frame x", block.frame.x);
       console.log("frame y", block.frame.y);
-
+      // console.log("calculating range of IC x", foundIC[0].frame.x);
+      // console.log("calculating range of IC y", foundIC[0].frame.y);
       block.lines.forEach((textLine) => {
         textLine.elements.forEach((element) => {
           const elementText = element.text;
@@ -189,22 +220,20 @@ const HomeScreen = ({}: IHomeScreenProps) => {
             const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === elementText.substring(7, 9));
             mykad.placeOfBirth = placeOfBirth?.location;
             mykad.dateOfBirth = capturedDate;
-            if (blocks) {
-              const blockName: string =
-                blocks[blocks.indexOf(block) + 1].text.length >= 1
-                  ? blocks[blocks.indexOf(block) + 1].text
-                  : blocks[blocks.indexOf(block)].text;
-              let name = blockName.replace(/\n/g, "");
-              if (
-                name.toLowerCase() !== "warganegara" &&
-                name.toLowerCase() !== "islam" &&
-                !name.toLowerCase().includes("myKadC") &&
-                !name.toLowerCase().includes("warganegara islam lelaki")
-              ) {
-                console.log(name);
-                mykad.name = blockName.replace(/\n/g, " ");
-                //   mykad.name = name.toUpperCase();
-              }
+
+            const blockName: string =
+              blocks[blocks.indexOf(block) + 1].text.length >= 1
+                ? blocks[blocks.indexOf(block) + 1].text
+                : blocks[blocks.indexOf(block)].text;
+            let name = blockName.replace(/\n/g, " ");
+            if (
+              name.toLowerCase() !== "warganegara islam" &&
+              name.toLowerCase() !== "islam" &&
+              !name.toLowerCase().includes("myKad") &&
+              !name.toLowerCase().includes("warganegara")
+            ) {
+              console.log(name);
+              mykad.name = name.replace(/\n/g, " ");
             }
           } else if (elementText.match("[0-9]{5}")) {
             mykad.postCode = elementText;

@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 import React from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ItemSeparator, ORANGE, h10, h100, h20, h204, w24 } from "../constants";
@@ -6,10 +6,10 @@ import { ItemSeparator, ORANGE, h10, h100, h20, h204, w24 } from "../constants";
 interface ISummaryScreenProps extends NativeStackScreenProps<RootStackParamList, "SummaryScreen"> {
   imageSource: string;
   cropImageSource: string;
-  mykad: IOCRNricData;
+  mykad?: IOCRNricData;
 }
-const SummaryScreen = ({ route, navigation }: ISummaryScreenProps) => {
-  const { imageSource, cropImageSource, mykad } = route.params;
+const SummaryScreen = ({ route }: ISummaryScreenProps) => {
+  const { imageSource, cropImageSource } = route.params;
   return (
     <View style={{ paddingHorizontal: w24 }}>
       <ItemSeparator height={h100} />
