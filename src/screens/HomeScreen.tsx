@@ -147,13 +147,13 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     const baseX = 355.5;
     const baseY = 979;
     const myKadMinX = 352.5;
-    const myKadMaxX = 450.75;
-    const myKadMinY = 974.75;
-    const myKadMaxY = 1369.25;
-    const noIcMinX = 985.75;
-    const noIcMaxX = 102.0;
-    const noIcMinY = 1070.25;
-    const noIcMaxY = 1155.5;
+    const myKadMaxX = 391.75;
+    const myKadMinY = 952.75;
+    const myKadMaxY = 1057.25;
+    const noIcMinX = 89.75;
+    const noIcMaxX = 104.25;
+    const noIcMinY = 1140.25;
+    const noIcMaxY = 1157.75;
 
     //cleaner codes
 
@@ -175,8 +175,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     const foundIC: ITextBlock[] = findMyIC.length > 0 ? [...findMyIC].splice(0, 1) : [];
     console.log("calculating range of no myKad x", hasMyKad[0].frame.x);
     console.log("calculating range of no myKad y", hasMyKad[0].frame.y);
-    // console.log("calculating range of no Ic x", findMyIC[0].frame.x);
-    // console.log("calculating range of no Ic y", findMyIC[0].frame.y);
+    console.log("calculating range of no Ic x", findMyIC[0].frame.x);
 
     //check position of mykad range
     if (
@@ -192,22 +191,24 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     }
 
     // check position of IC range
-    // if (
-    /////   !(
-    //     foundIC[0].frame.length > ) &&
-    //     foundIC[0].frame.x >= noIcMinX &&
-    //     foundIC[0].frame.x <= noIcMaxX &&
-    //     foundIC[0].frame.y >= noIcMinY &&
-    //     foundIC[0].frame.y <= noIcMaxY
-    //   )
-    // ) {
-    //   return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
-    // }
+    if (
+      !(
+        (foundIC.length > 0 && foundIC[0].frame.x >= noIcMinX && foundIC[0].frame.x <= noIcMaxX)
+        // foundIC[0].frame.y >= noIcMinY &&
+        // foundIC[0].frame.y <= noIcMaxY
+      )
+    ) {
+      return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
+    }
 
     blocks.forEach((block) => {
-      console.log("myKad -->", block.text);
-      console.log("frame x", block.frame.x);
-      console.log("frame y", block.frame.y);
+      // console.log("myKad -->", block.text);
+      console.log("calculating range of no myKad x", hasMyKad[0].frame.x);
+      console.log("calculating range of no myKad y", hasMyKad[0].frame.y);
+      console.log("calculating range of no Ic x", findMyIC[0].frame.x);
+
+      // console.log("frame x", block.frame.x);
+      // console.log("frame y", block.frame.y);
       // console.log("calculating range of IC x", foundIC[0].frame.x);
       // console.log("calculating range of IC y", foundIC[0].frame.y);
       block.lines.forEach((textLine) => {

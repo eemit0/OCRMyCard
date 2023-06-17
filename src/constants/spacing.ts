@@ -86,4 +86,4 @@ export const maxY = 980.75;
 
 export const hCrop = setHeight(1376);
 export const WCrop = setWidth(2560);
-export const yPosition = setHeight(1062);
+export const yPosition = setHeight(1064);
