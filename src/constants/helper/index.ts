@@ -1,1 +1,1 @@
-export * from "./OCRUtils";
+export * from "./OCRMyKad";

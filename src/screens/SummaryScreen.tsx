@@ -45,7 +45,7 @@ const SummaryScreen = ({ route }: ISummaryScreenProps) => {
         }}>
         <Image
           source={{ uri: cropImageSource }}
-          resizeMode="stretch"
+          resizeMode="contain"
           style={{
             height: "100%",
             width: "100%",

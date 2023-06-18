@@ -1,11 +1,10 @@
 import { Linking, Text, TouchableOpacity, View } from "react-native";
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { CornerMarker } from "../CornerMarker";
 import { Camera, useCameraDevices, useFrameProcessor, CameraDeviceFormat } from "react-native-vision-camera";
 import Icon from "react-native-vector-icons/Ionicons";
 import {
   BORDERCOLOUR,
-  DICTIONARY_PLACE_OF_BIRTH,
   FRAMERATIO,
   h12,
   h16,
@@ -18,14 +17,12 @@ import {
   h72,
   height,
   ItemSeparator,
-  NRIC_DATE_FORMAT,
   ORANGE,
   OVERLAY,
   OXFORDBLUE,
   POPPINS_BLACK,
   ProgressChecker,
   ROSERED,
-  titleCaseString,
   w100,
   w226,
   w24,
@@ -33,13 +30,12 @@ import {
   w5,
   w82,
   WHITE,
+  OCRFrontCard,
   width,
 } from "../constants";
 import { runOnJS } from "react-native-reanimated";
 import { scanOCR } from "vision-camera-ocr";
-import { OCRUtils } from "../constants";
 import { SECONDARY } from "../constants";
-import moment from "moment";
 import { ERROR, ERROR_CODE } from "../constants/error";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { Stepper } from "../Stepper";
@@ -49,6 +45,7 @@ import { GlobalContext } from "../Context";
 interface IHomeScreenProps extends NativeStackScreenProps<RootStackParamList, "HomeScreen"> {}
 const HomeScreen = ({}: IHomeScreenProps) => {
   const [imageSource, setImageSource] = useState("");
+  const [activeProcess, setActiveProcess] = useState<boolean>(false);
   const [flash, setFlash] = useState<boolean>(false);
   const [isScannedFront, setIsScannedFront] = useState<boolean>(false);
   const [isScannedBack, setIsScannedBack] = useState<boolean>(false);
@@ -86,7 +83,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
   //   const desiredHeight = 1080; // Specify the desired photo height
   //   const desiredWidth = 1920; // Specify the desired photo width
 
-  //   // Find the format that matches the desired height and width
+  //   Find the format that matches the desired height and width
   //   const desiredFormat = device.formats.find((f) => f.photoHeight === desiredHeight && f.photoWidth === desiredWidth);
 
   //   return desiredFormat || device.formats[0]; // Fallback to the first available format if desired format not found
@@ -94,18 +91,18 @@ const HomeScreen = ({}: IHomeScreenProps) => {
 
   const getPermission = useCallback(async () => {
     const permission = await Camera.requestCameraPermission();
+    const delay = 2000; // 5000 milliseconds (5 seconds)
+
+    const timerId = setTimeout((isPlacement) => {
+      // Code to be executed after the delay
+      console.log("Timeout completed");
+      setIsScannedValid(isPlacement);
+    }, delay);
     console.log("permission status ", permission);
     if (permission === "denied") await Linking.openSettings();
   }, []);
 
   const captureCamera = async () => {
-    const delay = 2000; // 5000 milliseconds (5 seconds)
-
-    const timerId = setTimeout(() => {
-      // Code to be executed after the delay
-      console.log("Timeout completed");
-    }, delay);
-
     if (camera.current !== null) {
       const capture = await camera.current.takePhoto({
         flash: flash ? "on" : "off",
@@ -114,14 +111,10 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       if (capture.path !== "" && isScannedValid === true) {
         setImageSource(capture.path);
         console.log(capture.path);
-        console.log("width:", capture.width);
-
-        console.log("height", capture.height);
-
-        if (NRICCard !== null) {
-          timerId;
-          navigation.navigate("InfoScreen", { mykad: NRICCard, imageSource: capture.path, currentStep: currentStep });
-        }
+      }
+      if (NRICCard !== null) {
+        // timerId;
+        navigation.navigate("InfoScreen", { mykad: NRICCard, imageSource: capture.path, currentStep: currentStep });
       }
     }
   };
@@ -138,24 +131,22 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       gender: "",
       country: "Malaysia",
     };
-    const wrongBlock: string[] = ["WARGANEGARA ISLAM", "ISLAM", "WARGANEGARA", "MYKADC", "WARGANEGARA ISLAM LELAKI"];
     const blocks: ITextBlock[] = frame.result.blocks;
     const resultText: string = frame.result.text;
-    let isPlacementValid = false;
-    // console.log("length", blocks.length);
+    let validatedInfo = false;
 
     const baseX = 355.5;
     const baseY = 979;
+    const myKadMaxX = 381.75;
+    const myKadMaxY = 980.25;
     const myKadMinX = 352.5;
-    const myKadMaxX = 391.75;
     const myKadMinY = 967.75;
-    const myKadMaxY = 1000.25;
-    const noIcMinX = 89.75;
     const noIcMaxX = 104.25;
-    const noIcMinY = 1140.25;
     const noIcMaxY = 1157.75;
+    const noIcMinX = 97.75;
+    const noIcMinY = 1140.25;
 
-    //cleaner codes
+    //cleaner codes ---> filter by words to find desired blocks
 
     const hasMyKad: ITextBlock[] = blocks.filter((eachBlock) => eachBlock.text.toLowerCase().includes("mykad"));
     const findMyIC: ITextBlock[] = blocks.filter((eachBlock) => eachBlock.text.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$"));
@@ -172,7 +163,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     }
 
     const oneMyKadBlock: ITextBlock[] = hasMyKad.length > 0 ? [...hasMyKad].splice(0, 1) : [];
-    const foundIC: ITextBlock[] = findMyIC.length > 0 ? [...findMyIC].splice(0, 1) : [];
+    const noICBlock: ITextBlock[] = findMyIC.length > 0 ? [...findMyIC].splice(0, 1) : [];
     console.log("calculating range of no myKad x", hasMyKad[0].frame.x);
     console.log("calculating range of no myKad y", hasMyKad[0].frame.y);
     console.log("calculating range of no Ic x", findMyIC[0].frame.x);
@@ -193,87 +184,20 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     // check position of IC range
     if (
       !(
-        (foundIC.length > 0 && foundIC[0].frame.x >= noIcMinX && foundIC[0].frame.x <= noIcMaxX)
+        (noICBlock.length > 0 && noICBlock[0].frame.x >= noIcMinX && noICBlock[0].frame.x <= noIcMaxX)
         // foundIC[0].frame.y >= noIcMinY &&
         // foundIC[0].frame.y <= noIcMaxY
       )
     ) {
       return { error: { code: ERROR_CODE.invalidNric, message: ERROR.OCR_INVALID_NRIC }, validFront: false };
     }
+    setIsScannedValid(true);
 
-    blocks.forEach((block) => {
-      // console.log("myKad -->", block.text);
-      console.log("calculating range of no myKad x", hasMyKad[0].frame.x);
-      console.log("calculating range of no myKad y", hasMyKad[0].frame.y);
-      console.log("calculating range of no Ic x", findMyIC[0].frame.x);
+    // To do send the image for real scanning for better accuracy
 
-      // console.log("frame x", block.frame.x);
-      // console.log("frame y", block.frame.y);
-      // console.log("calculating range of IC x", foundIC[0].frame.x);
-      // console.log("calculating range of IC y", foundIC[0].frame.y);
-      block.lines.forEach((textLine) => {
-        textLine.elements.forEach((element) => {
-          const elementText = element.text;
-          if (elementText.match("^([0-9]){6}-([0-9]){2}-([0-9]){4}$")) {
-            mykad.idNumber = elementText;
-            const nricDate = moment(elementText.substring(0, 6), NRIC_DATE_FORMAT);
-            const capturedDate = nricDate.isAfter() ? nricDate.subtract(100, "years").format("DD-MM-YYYY") : nricDate.format("DD-MM-YYYY");
-            const placeOfBirth = DICTIONARY_PLACE_OF_BIRTH.find((code) => code.code === elementText.substring(7, 9));
-            mykad.placeOfBirth = placeOfBirth?.location;
-            mykad.dateOfBirth = capturedDate;
+    const scanned = await OCRFrontCard(mykad, blocks, validatedInfo);
 
-            const blockName: string =
-              blocks[blocks.indexOf(block) + 1].text.length >= 1
-                ? blocks[blocks.indexOf(block) + 1].text
-                : blocks[blocks.indexOf(block)].text;
-            let name = blockName.replace(/\n/g, " ");
-            if (
-              name.toLowerCase() !== "warganegara islam" &&
-              name.toLowerCase() !== "islam" &&
-              !name.toLowerCase().includes("myKad") &&
-              !name.toLowerCase().includes("warganegara")
-            ) {
-              console.log(name);
-              mykad.name = name.replace(/\n/g, " ");
-            }
-          } else if (elementText.match("[0-9]{5}")) {
-            mykad.postCode = elementText;
-            if (block.text) {
-              const split = block.text.split("\n");
-              const postCodeCity = split.filter((value) => {
-                return value.match("^[0-9]{4,5}");
-              });
-              if (postCodeCity.length > 0) {
-                const [postcode] = postCodeCity[0].split(" ");
-                const [state] = split.slice(-1);
-                mykad.postCode = postcode;
-                mykad.city = titleCaseString(postCodeCity[0].split(" ").slice(1).join(" "));
-                mykad.address = block.text.replace(/\n/g, " ");
-                if (state.toLowerCase().includes("kl")) {
-                  mykad.state = "Wilayah Persekutuan";
-                } else if (state.toLowerCase().includes("putra")) {
-                  mykad.state = "Wilayah Persekutuan Putrajaya";
-                } else if (state.toLowerCase().includes("labuan")) {
-                  mykad.state = "Wilayah Persekutuan Labuan";
-                } else {
-                  mykad.state = titleCaseString(state);
-                }
-              }
-            }
-          } else if (elementText.toLowerCase() === "lelaki") {
-            mykad.gender = "Male";
-          } else if (elementText.toLowerCase() === "perempuan") {
-            mykad.gender = "Female";
-          }
-        });
-      });
-      console.log(mykad);
-      console.log("PERFECT FRAME!");
-      isPlacementValid = true;
-      console.log("isPlacement", isPlacementValid);
-    });
-
-    if (!isPlacementValid) {
+    if (!scanned.scannedIC) {
       console.log("invalid nric placement");
       setIsScannedValid(false);
       return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
@@ -285,18 +209,23 @@ const HomeScreen = ({}: IHomeScreenProps) => {
       return { error: { code: ERROR_CODE.invalidNricData, message: ERROR.OCR_INVALID_NRIC_DATA }, validFront: false };
     }
 
-    setIsScannedValid(isPlacementValid);
+    //setIsScannedValid(scanned.scannedIC);
     console.log("NRIC_CARD is valid");
-    //setNRICCard(mykad);
-    return { mykad, validFront: true };
+    return { mykad: scanned.mykad, validFront: true };
   };
 
   const nricCardBack = async (frame: TOCRFrame) => {
-    const processed = frame.result;
+    const blockBack = frame.result;
+
     console.log("ic no", contextMyKad);
-    if (processed.blocks.length > 0 && processed.text.toLowerCase().includes("pendaftaran negara")) {
+    if (blockBack.blocks.length > 0 && blockBack.text.toLowerCase().includes("pendaftaran negara")) {
       if (contextMyKad.idNumber) {
-        if (processed.text.includes(contextMyKad.idNumber)) {
+        if (blockBack.text.includes(contextMyKad.idNumber)) {
+          const processedBlocks = blockBack.blocks.filter((blocks) => {
+            return blocks.text.length > 0 && blocks.text.toLowerCase().includes("pendaftaran negara") ? blocks : [];
+          });
+          console.log("found pedaftaran negara?", processedBlocks[0].frame.boundingCenterY);
+
           //    console.log(processed.text);
           return { validBack: true };
         } else return { validBack: false };
@@ -343,16 +272,6 @@ const HomeScreen = ({}: IHomeScreenProps) => {
   const frameProcessor = useFrameProcessor(
     (frame) => {
       "worklet";
-      // let squareSize = frame.width * FRAMERATIO.width - 100;
-
-      // const scanFrame: TFrame = {
-      //   height: squareSize,
-      //   width: squareSize,
-      //   isValid: frame.isValid,
-      //   bytesPerRow: frame.bytesPerRow,
-      //   planesCount: frame.planesCount,
-      //   close: () => frame.toString(),
-      // };
 
       const scannedOcr = scanOCR(frame);
 
@@ -360,33 +279,9 @@ const HomeScreen = ({}: IHomeScreenProps) => {
         // console.log(scannedOcr.result.blocks);
 
         runOnJS(isValidNricCard)(scannedOcr);
-
-        //console.log("inside result", scannedOcr.result);
-        //const data = OCRUtils.mykadFront(scannedOcr);
-        // console.log(data);
-
-        //const cornerPoints = scannedOcr.cornerPoints;
-        // const xRatio = frame.width / width;
-        // const yRatio = frame.height / height;
-        // if (Platform.OS === 'ios') {
-        //   const xArray = cornerPoints.map(corner => parseFloat(corner.x));
-        //   const yArray = cornerPoints.map(corner => parseFloat(corner.y));
-        //   const resultPoints = {
-        //     left: Math.min(...xArray) / xRatio,
-        //     right: Math.max(...xArray) / xRatio,
-        //     bottom: Math.max(...yArray) / yRatio,
-        //     top: Math.min(...yArray) / yRatio,
-        //   };
-        //   runOnJS(setPointsOfInterest)(resultPoints);
-        // } else {
-        // }
-        //   runOnJS(setBarcodes)(detectedBarcodes);
-        // } else {
-        //   runOnJS(setPointsOfInterest)(null);
-        // }
       }
     },
-    [scanOCR, OCRUtils],
+    [scanOCR, isValidNricCard],
   );
   const OCRSCANNER = "OCRSCANNER";
   const progress = 34.5;
@@ -439,7 +334,6 @@ const HomeScreen = ({}: IHomeScreenProps) => {
                   frameProcessor={frameProcessor}
                   isActive={isFocused}
                   photo
-                  frameProcessorFps={30}
                   ref={camera}
                   //format={format}
                   style={{ height: FRAMERATIO.height, width: FRAMERATIO.width, borderRadius: 16 }}

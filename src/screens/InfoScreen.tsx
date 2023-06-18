@@ -19,19 +19,16 @@ import {
   h56,
   h660,
   hCrop,
-  height,
   ItemSeparator,
   minHeight,
   ORANGE,
   POPPINS_BLACK,
   setHeight,
-  setWidth,
   STEPBLUE,
   w24,
   w342,
   WCrop,
   WHITE,
-  width,
   yPosition,
 } from "../constants";
 import { Stepper } from "../Stepper";
@@ -48,8 +45,7 @@ const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
   const { mykad, imageSource, currentStep } = route.params;
   const { setProgress, myKad: contextMyKad } = useContext(GlobalContext);
 
-  const cropImage = () => {
-    const image = imageSource;
+  const cropImage = (image: string) => {
     const cropRegion = {
       x: 8,
       y: yPosition + FRAMERATIO.height,
@@ -85,7 +81,7 @@ const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
     if (handleProgress.front === true && handleProgress.back === true && nextStep === true) {
       console.log("handleProgress", handleProgress);
       console.log("Mykad is valid and ready");
-      cropImage();
+      cropImage(imageSource);
       // setProgress("Front", {});
       //repeat process
       // navigation.push("HomeScreen", { currentStep: "Front" });
