@@ -2,11 +2,11 @@ import { Image, ScrollView, StatusBar, Text, TextStyle, TouchableOpacity, View, 
 import React, { useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import RNPhotoManipulator from "react-native-photo-manipulator";
 
 import {
   ACCENTBLUE,
   ACTIVE,
+  cropImage,
   FRAMERATIO,
   h136,
   h20,
@@ -45,20 +45,6 @@ const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
   const { mykad, imageSource, currentStep } = route.params;
   const { setProgress, myKad: contextMyKad } = useContext(GlobalContext);
 
-  const cropImage = (image: string) => {
-    const cropRegion = {
-      x: 8,
-      y: yPosition + FRAMERATIO.height,
-      height: hCrop,
-      width: WCrop - FRAMERATIO.width,
-    };
-    const targetSize = { height: setHeight(63), width: FRAMERATIO.width };
-
-    RNPhotoManipulator.crop(image, cropRegion).then((path) => {
-      //console.log(`results image path:,${path}`);
-      navigation.navigate("SummaryScreen", { imageSource: image, cropImageSource: path, mykad: contextMyKad });
-    });
-  };
   const setNextProgress = async (currentStep: string, mykad: IOCRNricData, nextStep: boolean) => {
     // const handleProgress = await setProgress(currentStep, mykad);
     // if (handleProgress.front === true && handleProgress.back === true && nextStep === true) {
@@ -81,7 +67,8 @@ const InfoScreen = ({ route, navigation }: IInfoScreenProps) => {
     if (handleProgress.front === true && handleProgress.back === true && nextStep === true) {
       console.log("handleProgress", handleProgress);
       console.log("Mykad is valid and ready");
-      cropImage(imageSource);
+      const imagePath = await cropImage(imageSource);
+      navigation.navigate("SummaryScreen", { imageSource: imageSource, cropImageSource: imagePath, mykad: contextMyKad });
       // setProgress("Front", {});
       //repeat process
       // navigation.push("HomeScreen", { currentStep: "Front" });

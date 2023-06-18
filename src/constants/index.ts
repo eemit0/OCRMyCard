@@ -5,3 +5,4 @@ export * from "./color";
 export * from "./helper";
 export * from "./itemSeparator";
 export * from "./Fonts";
+export * from "./cropImage";
