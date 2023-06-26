@@ -137,7 +137,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
 
     const baseX = 355.5;
     const baseY = 979;
-    const myKadMaxX = 381.75;
+    const myKadMaxX = 400.75;
     const myKadMaxY = 980.25;
     const myKadMinX = 352.5;
     const myKadMinY = 967.75;
@@ -316,7 +316,6 @@ const HomeScreen = ({}: IHomeScreenProps) => {
           }}>
           {isScannedValid ? "good placement!" : "Correct the placement of MyKad!"}
         </Text>
-
         <View style={{ paddingVertical: h72, paddingHorizontal: w24 }}>
           <CornerMarker
             color={isScannedValid === true ? BORDERCOLOUR : ROSERED}
