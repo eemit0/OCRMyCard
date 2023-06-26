@@ -297,6 +297,7 @@ const HomeScreen = ({}: IHomeScreenProps) => {
     getPermission();
   }, []);
 
+  const handlData = () => {};
   return (
     <View style={{ backgroundColor: OXFORDBLUE, flex: 1 }}>
       <ItemSeparator height={h72} />
